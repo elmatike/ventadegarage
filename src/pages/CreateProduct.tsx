@@ -4,12 +4,13 @@ import { useAuth } from '@/context/AuthContext'
 import { supabase, STORAGE_BUCKET } from '@/lib/supabase'
 import { compressImages } from '@/utils/compressImage'
 import { useGeolocation } from '@/hooks/useGeolocation'
+import LocationPicker from '@/components/products/LocationPicker'
 import { motion } from 'framer-motion'
 
 export default function CreateProduct() {
   const [, navigate] = useLocation()
   const { user } = useAuth()
-  const { lat, lng, error: geoError, loading: geoLoading } = useGeolocation()
+  const { lat: gpsLat, lng: gpsLng, error: geoError, loading: geoLoading, requestLocation } = useGeolocation()
 
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -18,6 +19,9 @@ export default function CreateProduct() {
   const [precio, setPrecio] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedLat, setSelectedLat] = useState<number | null>(gpsLat)
+  const [selectedLng, setSelectedLng] = useState<number | null>(gpsLng)
+  const [showMap, setShowMap] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -34,6 +38,12 @@ export default function CreateProduct() {
     URL.revokeObjectURL(imagePreviews[index])
     setImages(prev => prev.filter((_, i) => i !== index))
     setImagePreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function handleLocationSelect(lat: number, lng: number) {
+    setSelectedLat(lat)
+    setSelectedLng(lng)
+    setShowMap(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,8 +65,9 @@ export default function CreateProduct() {
       return
     }
 
-    if (lat === null || lng === null) {
-      setError('No se pudo obtener tu ubicación. Activá los permisos de ubicación.')
+    if (selectedLat === null || selectedLng === null) {
+      setError('Seleccioná tu ubicación en el mapa')
+      setShowMap(true)
       return
     }
 
@@ -89,8 +100,8 @@ export default function CreateProduct() {
           titulo: titulo.trim(),
           descripcion: descripcion.trim(),
           precio: Math.round(Number(precio)),
-          lat,
-          lng,
+          lat: selectedLat,
+          lng: selectedLng,
           imagenes: imageUrls,
         })
 
@@ -104,6 +115,8 @@ export default function CreateProduct() {
       setLoading(false)
     }
   }
+
+  const hasLocation = selectedLat !== null && selectedLng !== null
 
   return (
     <motion.div
@@ -126,9 +139,30 @@ export default function CreateProduct() {
           </div>
         )}
 
-        {geoError && (
-          <div className="bg-danger/10 border border-danger/20 text-danger text-sm p-3 rounded-xl">
-            {geoError}
+        {/* Location status */}
+        {geoError && !hasLocation && (
+          <div className="bg-warning/10 border border-warning/20 text-warning text-sm p-3 rounded-xl space-y-2">
+            <p>No se pudo acceder a tu ubicación. Elegila manualmente en el mapa.</p>
+            <button
+              type="button"
+              onClick={() => setShowMap(true)}
+              className="text-xs font-medium underline"
+            >
+              Abrir mapa
+            </button>
+          </div>
+        )}
+
+        {hasLocation && (
+          <div className="bg-accent-muted border border-accent/20 text-accent text-sm p-3 rounded-xl flex items-center justify-between">
+            <span>Ubicación seleccionada</span>
+            <button
+              type="button"
+              onClick={() => setShowMap(true)}
+              className="text-xs font-medium underline"
+            >
+              Cambiar
+            </button>
           </div>
         )}
 
@@ -210,6 +244,17 @@ export default function CreateProduct() {
           />
         </div>
 
+        {/* Retry GPS button */}
+        {geoError && !hasLocation && (
+          <button
+            type="button"
+            onClick={requestLocation}
+            className="w-full bg-surface border border-border text-text-secondary hover:text-accent hover:border-accent font-medium py-2.5 rounded-xl text-sm transition-colors"
+          >
+            Reintentar ubicación automática
+          </button>
+        )}
+
         {/* Submit */}
         <button
           type="submit"
@@ -219,6 +264,27 @@ export default function CreateProduct() {
           {loading ? 'Publicando...' : 'Publicar'}
         </button>
       </form>
+
+      {/* Location Picker Modal */}
+      {showMap && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-end md:items-center justify-center">
+          <div className="bg-[#141414] w-full max-w-lg rounded-t-3xl md:rounded-3xl border border-border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Seleccioná tu ubicación</h2>
+              <button
+                onClick={() => setShowMap(false)}
+                className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-xs text-text-muted mb-4">
+              Hacé click en el mapa para poner tu ubicación. También podés arrastrar el pin.
+            </p>
+            <LocationPicker onLocationSelect={handleLocationSelect} />
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }

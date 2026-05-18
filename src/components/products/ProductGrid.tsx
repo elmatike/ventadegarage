@@ -15,9 +15,10 @@ interface ProductGridProps {
   products: Product[]
   userLat: number | null
   userLng: number | null
+  onProductClick: (product: Product) => void
 }
 
-export default function ProductGrid({ products, userLat, userLng }: ProductGridProps) {
+export default function ProductGrid({ products, userLat, userLng, onProductClick }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -34,7 +35,13 @@ export default function ProductGrid({ products, userLat, userLng }: ProductGridP
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} userLat={userLat} userLng={userLng} />
+        <ProductCard
+          key={product.id}
+          product={product}
+          userLat={userLat}
+          userLng={userLng}
+          onClick={() => onProductClick(product)}
+        />
       ))}
     </div>
   )

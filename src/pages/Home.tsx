@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import ProductGrid from '@/components/products/ProductGrid'
+import ProductDetail from '@/components/products/ProductDetail'
 
 interface Product {
   id: string
@@ -25,6 +26,7 @@ export default function Home() {
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   useEffect(() => {
     if (lat !== null && lng !== null) {
@@ -153,7 +155,22 @@ export default function Home() {
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <ProductGrid products={filtered} userLat={lat} userLng={lng} />
+        <ProductGrid
+          products={filtered}
+          userLat={lat}
+          userLng={lng}
+          onProductClick={setSelectedProduct}
+        />
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetail
+          product={selectedProduct}
+          userLat={lat}
+          userLng={lng}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
     </motion.div>
   )
